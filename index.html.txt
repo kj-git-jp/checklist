@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>チェックリスト</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    li { list-style: none; margin: 10px 0; }
+    input[type="text"] { padding: 8px; width: 70%; }
+    button { padding: 8px; }
+  </style>
+</head>
+<body>
+
+<h2>チェックリスト</h2>
+
+<input id="itemInput" placeholder="項目を追加">
+<button onclick="addItem()">追加</button>
+
+<ul id="list"></ul>
+
+<script>
+  const list = document.getElementById("list");
+
+  function load() {
+    const data = JSON.parse(localStorage.getItem("items")) || [];
+    list.innerHTML = "";
+    data.forEach((item, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <input type="checkbox" ${item.done ? "checked" : ""} 
+          onchange="toggle(${i})">
+        ${item.text}
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function addItem() {
+    const input = document.getElementById("itemInput");
+    if (!input.value) return;
+    const data = JSON.parse(localStorage.getItem("items")) || [];
+    data.push({ text: input.value, done: false });
+    localStorage.setItem("items", JSON.stringify(data));
+    input.value = "";
+    load();
+  }
+
+  function toggle(i) {
+    const data = JSON.parse(localStorage.getItem("items"));
+    data[i].done = !data[i].done;
+    localStorage.setItem("items", JSON.stringify(data));
+    load();
+  }
+
+  load();
+</script>
+
+</body>
+</html>
