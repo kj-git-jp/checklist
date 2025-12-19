@@ -9,29 +9,83 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <style>
-    body { font-family: sans-serif; padding: 20px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+      background: #f2f2f7;
+      margin: 0;
+      padding: 0;
+    }
+
+    h2 {
+      padding: 16px;
+      margin: 0;
+      font-size: 22px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 14px;
+      font-size: 16px;
+      border-radius: 10px;
+      border: none;
+      background: #007aff;
+      color: #fff;
+    }
+
+    ul {
+      margin: 0;
+      padding: 0;
+    }
+
     li {
       list-style: none;
-      margin: 10px 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 14px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e5e5ea;
     }
+
     .left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+      font-size: 17px;
     }
-    input[type="text"] { padding: 8px; width: 70%; }
-    button { padding: 6px 10px; }
+
+    input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+    }
+
+    .done {
+      color: #8e8e93;
+      text-decoration: line-through;
+    }
+
     .delete {
       background: none;
       border: none;
-      font-size: 18px;
-    }
-    .done {
-      text-decoration: line-through;
-      color: #999;
+      font-size: 20px;
+      color: #ff3b30;
     }
   </style>
 </head>
@@ -39,8 +93,10 @@
 
 <h2>チェックリスト</h2>
 
-<input id="itemInput" placeholder="項目を追加">
-<button onclick="addItem()">追加</button>
+<div class="input-area">
+  <input id="itemInput" placeholder="新しい項目">
+  <button onclick="addItem()">追加</button>
+</div>
 
 <ul id="list"></ul>
 
@@ -58,7 +114,7 @@
   function load() {
     let data = getData();
 
-    // ✅ ここがポイント：並び替え
+    // チェック済みを下へ
     data.sort((a, b) => a.done - b.done);
 
     list.innerHTML = "";
@@ -71,7 +127,7 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <span class="${item.done ? "done" : ""}">${item.text}</span>
         </div>
-        <button class="delete">🗑</button>
+        <button class="delete">削除</button>
       `;
 
       li.querySelector("input").addEventListener("change", () => {
