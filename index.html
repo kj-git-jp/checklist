@@ -29,6 +29,10 @@
       border: none;
       font-size: 18px;
     }
+    .done {
+      text-decoration: line-through;
+      color: #999;
+    }
   </style>
 </head>
 <body>
@@ -52,7 +56,11 @@
   }
 
   function load() {
-    const data = getData();
+    let data = getData();
+
+    // ✅ ここがポイント：並び替え
+    data.sort((a, b) => a.done - b.done);
+
     list.innerHTML = "";
 
     data.forEach(item => {
@@ -61,17 +69,15 @@
       li.innerHTML = `
         <div class="left">
           <input type="checkbox" ${item.done ? "checked" : ""}>
-          <span>${item.text}</span>
+          <span class="${item.done ? "done" : ""}">${item.text}</span>
         </div>
         <button class="delete">🗑</button>
       `;
 
-      // チェック切替
       li.querySelector("input").addEventListener("change", () => {
         toggleItem(item.id);
       });
 
-      // 削除
       li.querySelector(".delete").addEventListener("click", () => {
         removeItem(item.id);
       });
@@ -86,7 +92,7 @@
 
     const data = getData();
     data.push({
-      id: Date.now(),   // ← 一意なID
+      id: Date.now(),
       text: input.value,
       done: false
     });
