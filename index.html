@@ -5,18 +5,17 @@
   <title>チェックリスト</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- PWA用（iPhoneでアプリ風） -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    li { 
-      list-style: none; 
-      margin: 10px 0; 
-      display: flex; 
-      align-items: center;
+    li {
+      list-style: none;
+      margin: 10px 0;
+      display: flex;
       justify-content: space-between;
+      align-items: center;
     }
     .left {
       display: flex;
@@ -26,9 +25,9 @@
     input[type="text"] { padding: 8px; width: 70%; }
     button { padding: 6px 10px; }
     .delete {
-      background: #eee;
+      background: none;
       border: none;
-      font-size: 16px;
+      font-size: 18px;
     }
   </style>
 </head>
@@ -44,20 +43,38 @@
 <script>
   const list = document.getElementById("list");
 
+  function getData() {
+    return JSON.parse(localStorage.getItem("items")) || [];
+  }
+
+  function saveData(data) {
+    localStorage.setItem("items", JSON.stringify(data));
+  }
+
   function load() {
-    const data = JSON.parse(localStorage.getItem("items")) || [];
+    const data = getData();
     list.innerHTML = "";
-    data.forEach((item, i) => {
+
+    data.forEach(item => {
       const li = document.createElement("li");
 
       li.innerHTML = `
         <div class="left">
-          <input type="checkbox" ${item.done ? "checked" : ""} 
-            onchange="toggle(${i})">
+          <input type="checkbox" ${item.done ? "checked" : ""}>
           <span>${item.text}</span>
         </div>
-        <button class="delete" onclick="removeItem(${i})">🗑</button>
+        <button class="delete">🗑</button>
       `;
+
+      // チェック切替
+      li.querySelector("input").addEventListener("change", () => {
+        toggleItem(item.id);
+      });
+
+      // 削除
+      li.querySelector(".delete").addEventListener("click", () => {
+        removeItem(item.id);
+      });
 
       list.appendChild(li);
     });
@@ -66,24 +83,30 @@
   function addItem() {
     const input = document.getElementById("itemInput");
     if (!input.value) return;
-    const data = JSON.parse(localStorage.getItem("items")) || [];
-    data.push({ text: input.value, done: false });
-    localStorage.setItem("items", JSON.stringify(data));
+
+    const data = getData();
+    data.push({
+      id: Date.now(),   // ← 一意なID
+      text: input.value,
+      done: false
+    });
+
+    saveData(data);
     input.value = "";
     load();
   }
 
-  function toggle(i) {
-    const data = JSON.parse(localStorage.getItem("items"));
-    data[i].done = !data[i].done;
-    localStorage.setItem("items", JSON.stringify(data));
+  function toggleItem(id) {
+    const data = getData();
+    const item = data.find(i => i.id === id);
+    if (item) item.done = !item.done;
+    saveData(data);
     load();
   }
 
-  function removeItem(i) {
-    const data = JSON.parse(localStorage.getItem("items"));
-    data.splice(i, 1);   // ← ここが削除
-    localStorage.setItem("items", JSON.stringify(data));
+  function removeItem(id) {
+    const data = getData().filter(i => i.id !== id);
+    saveData(data);
     load();
   }
 
