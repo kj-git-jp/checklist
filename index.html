@@ -7,15 +7,16 @@
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon.png">
 
-  <link rel="apple-touch-icon" href="8E9DBE46-E5DF-4EB7-B79D-51A6B48D3E60.png">
-  
   <style>
+    /* ===== ライトモード（基本） ===== */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
       background: #f2f2f7;
       margin: 0;
       padding: 0;
+      color: #000;
     }
 
     h2 {
@@ -86,8 +87,45 @@
     .delete {
       background: none;
       border: none;
-      font-size: 20px;
+      font-size: 16px;
       color: #ff3b30;
+    }
+
+    /* ===== ダークモード ===== */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #000;
+        color: #fff;
+      }
+
+      h2 {
+        background: #1c1c1e;
+        border-bottom: 1px solid #2c2c2e;
+      }
+
+      .input-area {
+        background: #1c1c1e;
+        border-bottom: 1px solid #2c2c2e;
+      }
+
+      input[type="text"] {
+        background: #2c2c2e;
+        color: #fff;
+        border: 1px solid #3a3a3c;
+      }
+
+      li {
+        background: #1c1c1e;
+        border-bottom: 1px solid #2c2c2e;
+      }
+
+      .done {
+        color: #8e8e93;
+      }
+
+      .delete {
+        color: #ff453a;
+      }
     }
   </style>
 </head>
@@ -115,15 +153,11 @@
 
   function load() {
     let data = getData();
-
-    // チェック済みを下へ
     data.sort((a, b) => a.done - b.done);
-
     list.innerHTML = "";
 
     data.forEach(item => {
       const li = document.createElement("li");
-
       li.innerHTML = `
         <div class="left">
           <input type="checkbox" ${item.done ? "checked" : ""}>
