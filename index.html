@@ -10,12 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
 
   <style>
-    /* ===== ライトモード（基本） ===== */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
       background: #f2f2f7;
       margin: 0;
-      padding: 0;
       color: #000;
     }
 
@@ -29,16 +27,16 @@
 
     .input-area {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       padding: 12px;
       background: #fff;
       border-bottom: 1px solid #ddd;
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="date"] {
       flex: 1;
-      padding: 10px 12px;
-      font-size: 16px;
+      padding: 10px;
+      font-size: 15px;
       border-radius: 10px;
       border: 1px solid #ccc;
     }
@@ -52,31 +50,38 @@
       color: #fff;
     }
 
-    ul {
-      margin: 0;
-      padding: 0;
-    }
+    ul { margin: 0; padding: 0; }
 
     li {
       list-style: none;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       padding: 14px 16px;
       background: #fff;
       border-bottom: 1px solid #e5e5ea;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .left {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-size: 17px;
     }
 
-    input[type="checkbox"] {
-      width: 22px;
-      height: 22px;
+    .text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .date {
+      font-size: 13px;
+      color: #8e8e93;
+    }
+
+    .overdue {
+      color: #ff3b30;
+      font-weight: 600;
     }
 
     .done {
@@ -91,40 +96,15 @@
       color: #ff3b30;
     }
 
-    /* ===== ダークモード ===== */
+    /* ダークモード */
     @media (prefers-color-scheme: dark) {
-      body {
-        background: #000;
-        color: #fff;
-      }
-
-      h2 {
-        background: #1c1c1e;
-        border-bottom: 1px solid #2c2c2e;
-      }
-
-      .input-area {
-        background: #1c1c1e;
-        border-bottom: 1px solid #2c2c2e;
-      }
-
-      input[type="text"] {
+      body { background: #000; color: #fff; }
+      h2, .input-area, li { background: #1c1c1e; }
+      li { border-bottom: 1px solid #2c2c2e; }
+      input[type="text"], input[type="date"] {
         background: #2c2c2e;
         color: #fff;
         border: 1px solid #3a3a3c;
-      }
-
-      li {
-        background: #1c1c1e;
-        border-bottom: 1px solid #2c2c2e;
-      }
-
-      .done {
-        color: #8e8e93;
-      }
-
-      .delete {
-        color: #ff453a;
       }
     }
   </style>
@@ -135,6 +115,7 @@
 
 <div class="input-area">
   <input id="itemInput" placeholder="新しい項目">
+  <input id="dateInput" type="date">
   <button onclick="addItem()">追加</button>
 </div>
 
@@ -151,17 +132,39 @@
     localStorage.setItem("items", JSON.stringify(data));
   }
 
+  function isOverdue(date) {
+    if (!date) return false;
+    const today = new Date().toISOString().split("T")[0];
+    return date < today;
+  }
+
   function load() {
     let data = getData();
-    data.sort((a, b) => a.done - b.done);
+
+    // 並び順：
+    // 1. 未チェック（期限あり → 近い順）
+    // 2. 未チェック（期限なし）
+    // 3. チェック済み
+    data.sort((a, b) => {
+      if (a.done !== b.done) return a.done - b.done;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.localeCompare(b.date);
+    });
+
     list.innerHTML = "";
 
     data.forEach(item => {
+      const overdue = isOverdue(item.date) && !item.done;
+
       const li = document.createElement("li");
       li.innerHTML = `
         <div class="left">
           <input type="checkbox" ${item.done ? "checked" : ""}>
-          <span class="${item.done ? "done" : ""}">${item.text}</span>
+          <div class="text">
+            <span class="${item.done ? "done" : ""}">${item.text}</span>
+            ${item.date ? `<span class="date ${overdue ? "overdue" : ""}">期限: ${item.date}</span>` : ""}
+          </div>
         </div>
         <button class="delete">削除</button>
       `;
@@ -179,18 +182,22 @@
   }
 
   function addItem() {
-    const input = document.getElementById("itemInput");
-    if (!input.value) return;
+    const text = document.getElementById("itemInput");
+    const date = document.getElementById("dateInput");
+
+    if (!text.value) return;
 
     const data = getData();
     data.push({
       id: Date.now(),
-      text: input.value,
+      text: text.value,
+      date: date.value,
       done: false
     });
 
     saveData(data);
-    input.value = "";
+    text.value = "";
+    date.value = "";
     load();
   }
 
@@ -203,8 +210,7 @@
   }
 
   function removeItem(id) {
-    const data = getData().filter(i => i.id !== id);
-    saveData(data);
+    saveData(getData().filter(i => i.id !== id));
     load();
   }
 
