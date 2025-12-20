@@ -14,15 +14,42 @@
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
       background: #f2f2f7;
       margin: 0;
-      color: #000;
     }
 
     h2 {
-      padding: 16px;
+      padding: 14px 16px;
       margin: 0;
-      font-size: 22px;
+      font-size: 20px;
       background: #fff;
       border-bottom: 1px solid #ddd;
+    }
+
+    .lists {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      overflow-x: auto;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .lists button {
+      padding: 6px 12px;
+      border-radius: 14px;
+      border: none;
+      background: #e5e5ea;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .lists .active {
+      background: #007aff;
+      color: #fff;
+    }
+
+    .add-list {
+      background: #34c759;
+      color: #fff;
     }
 
     .input-area {
@@ -74,17 +101,6 @@
       gap: 4px;
     }
 
-    .date-label {
-      font-size: 13px;
-      color: #8e8e93;
-    }
-
-    .date-input {
-      font-size: 13px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-
     .overdue {
       color: #ff3b30;
       font-weight: 600;
@@ -104,7 +120,7 @@
 
     @media (prefers-color-scheme: dark) {
       body { background: #000; color: #fff; }
-      h2, .input-area, li { background: #1c1c1e; }
+      h2, .lists, .input-area, li { background: #1c1c1e; }
       li { border-bottom: 1px solid #2c2c2e; }
       input[type="text"], input[type="date"] {
         background: #2c2c2e;
@@ -116,7 +132,9 @@
 </head>
 <body>
 
-<h2>チェックリスト</h2>
+<h2 id="title">チェックリスト</h2>
+
+<div class="lists" id="lists"></div>
 
 <div class="input-area">
   <input id="itemInput" placeholder="新しい項目">
@@ -124,17 +142,19 @@
   <button onclick="addItem()">追加</button>
 </div>
 
-<ul id="list"></ul>
+<ul id="items"></ul>
 
 <script>
-  const list = document.getElementById("list");
+  let currentList = localStorage.getItem("currentList") || "default";
 
-  function getData() {
-    return JSON.parse(localStorage.getItem("items")) || [];
+  function getLists() {
+    return JSON.parse(localStorage.getItem("lists")) || {
+      default: { name: "メイン", items: [] }
+    };
   }
 
-  function saveData(data) {
-    localStorage.setItem("items", JSON.stringify(data));
+  function saveLists(lists) {
+    localStorage.setItem("lists", JSON.stringify(lists));
   }
 
   function isOverdue(date) {
@@ -143,19 +163,57 @@
     return date < today;
   }
 
-  function load() {
-    let data = getData();
+  function renderLists() {
+    const lists = getLists();
+    const container = document.getElementById("lists");
+    container.innerHTML = "";
 
-    data.sort((a, b) => {
+    Object.keys(lists).forEach(id => {
+      const btn = document.createElement("button");
+      btn.textContent = lists[id].name;
+      if (id === currentList) btn.classList.add("active");
+      btn.onclick = () => {
+        currentList = id;
+        localStorage.setItem("currentList", id);
+        render();
+      };
+      container.appendChild(btn);
+    });
+
+    const add = document.createElement("button");
+    add.textContent = "＋";
+    add.className = "add-list";
+    add.onclick = () => {
+      const name = prompt("リスト名");
+      if (!name) return;
+      const id = Date.now();
+      lists[id] = { name, items: [] };
+      saveLists(lists);
+      currentList = id;
+      localStorage.setItem("currentList", id);
+      render();
+    };
+    container.appendChild(add);
+  }
+
+  function render() {
+    const lists = getLists();
+    const list = lists[currentList];
+    if (!list) return;
+
+    document.getElementById("title").textContent = list.name;
+
+    list.items.sort((a, b) => {
       if (a.done !== b.done) return a.done - b.done;
       if (!a.date) return 1;
       if (!b.date) return -1;
       return a.date.localeCompare(b.date);
     });
 
-    list.innerHTML = "";
+    const ul = document.getElementById("items");
+    ul.innerHTML = "";
 
-    data.forEach(item => {
+    list.items.forEach(item => {
       const overdue = isOverdue(item.date) && !item.done;
 
       const li = document.createElement("li");
@@ -164,77 +222,55 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            <label class="date-label">
-              期限:
-              <input
-                type="date"
-                class="date-input ${overdue ? "overdue" : ""}"
-                value="${item.date || ""}"
-              >
-            </label>
+            <input type="date" value="${item.date || ""}" class="${overdue ? "overdue" : ""}">
           </div>
         </div>
         <button class="delete">削除</button>
       `;
 
-      li.querySelector("input[type=checkbox]").addEventListener("change", () => {
-        toggleItem(item.id);
-      });
+      li.querySelector("input[type=checkbox]").onchange = () => {
+        item.done = !item.done;
+        saveLists(lists);
+        render();
+      };
 
-      li.querySelector(".date-input").addEventListener("change", e => {
-        updateDate(item.id, e.target.value);
-      });
+      li.querySelector("input[type=date]").onchange = e => {
+        item.date = e.target.value;
+        saveLists(lists);
+        render();
+      };
 
-      li.querySelector(".delete").addEventListener("click", () => {
-        removeItem(item.id);
-      });
+      li.querySelector(".delete").onclick = () => {
+        list.items = list.items.filter(i => i.id !== item.id);
+        saveLists(lists);
+        render();
+      };
 
-      list.appendChild(li);
+      ul.appendChild(li);
     });
-  }
 
-  function updateDate(id, date) {
-    const data = getData();
-    const item = data.find(i => i.id === id);
-    if (item) item.date = date;
-    saveData(data);
-    load();
+    renderLists();
   }
 
   function addItem() {
-    const text = document.getElementById("itemInput");
-    const date = document.getElementById("dateInput");
+    const text = itemInput.value;
+    if (!text) return;
 
-    if (!text.value) return;
-
-    const data = getData();
-    data.push({
+    const lists = getLists();
+    lists[currentList].items.push({
       id: Date.now(),
-      text: text.value,
-      date: date.value,
+      text,
+      date: dateInput.value,
       done: false
     });
 
-    saveData(data);
-    text.value = "";
-    date.value = "";
-    load();
+    saveLists(lists);
+    itemInput.value = "";
+    dateInput.value = "";
+    render();
   }
 
-  function toggleItem(id) {
-    const data = getData();
-    const item = data.find(i => i.id === id);
-    if (item) item.done = !item.done;
-    saveData(data);
-    load();
-  }
-
-  function removeItem(id) {
-    saveData(getData().filter(i => i.id !== id));
-    load();
-  }
-
-  load();
+  render();
 </script>
 
 </body>
