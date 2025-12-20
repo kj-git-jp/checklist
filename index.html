@@ -5,6 +5,7 @@
   <title>チェックリスト</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- PWA設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="icon.png">
@@ -122,8 +123,19 @@
 
 <ul id="list"></ul>
 
-<!-- 👇 編集用の隠し date picker -->
-<input id="hiddenDate" type="date" style="display:none">
+<!-- 👇 編集用の日付ピッカー（iOS対策済み） -->
+<input
+  id="hiddenDate"
+  type="date"
+  style="
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    opacity: 0;
+  "
+>
 
 <script>
   const list = document.getElementById("list");
@@ -165,7 +177,7 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            <span class="date ${overdue ? "overdue" : ""}" data-id="${item.id}">
+            <span class="date ${overdue ? "overdue" : ""}">
               ${item.date ? "期限: " + item.date : "期限を設定"}
             </span>
           </div>
@@ -192,7 +204,11 @@
   function openDatePicker(id, currentDate) {
     editingId = id;
     hiddenDate.value = currentDate || "";
-    hiddenDate.click(); // ← iOS標準ピッカーが出る
+
+    // 👇 iOS Safari / PWA 対策
+    hiddenDate.style.opacity = 0.01;
+    hiddenDate.focus();
+    hiddenDate.click();
   }
 
   hiddenDate.addEventListener("change", () => {
@@ -204,6 +220,7 @@
 
     saveData(data);
     editingId = null;
+    hiddenDate.style.opacity = 0;
     load();
   });
 
