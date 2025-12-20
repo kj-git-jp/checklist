@@ -5,7 +5,6 @@
   <title>チェックリスト</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- PWA設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="apple-touch-icon" href="icon.png">
@@ -35,7 +34,6 @@
     }
 
     input[type="text"], input[type="date"] {
-      flex: 1;
       padding: 10px;
       font-size: 15px;
       border-radius: 10px;
@@ -73,12 +71,18 @@
     .text {
       display: flex;
       flex-direction: column;
+      gap: 4px;
     }
 
-    .date {
+    .date-label {
       font-size: 13px;
-      color: #007aff;
-      cursor: pointer;
+      color: #8e8e93;
+    }
+
+    .date-input {
+      font-size: 13px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
     }
 
     .overdue {
@@ -98,7 +102,6 @@
       color: #ff3b30;
     }
 
-    /* ダークモード */
     @media (prefers-color-scheme: dark) {
       body { background: #000; color: #fff; }
       h2, .input-area, li { background: #1c1c1e; }
@@ -123,24 +126,8 @@
 
 <ul id="list"></ul>
 
-<!-- 👇 編集用の日付ピッカー（iOS対策済み） -->
-<input
-  id="hiddenDate"
-  type="date"
-  style="
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999;
-    opacity: 0;
-  "
->
-
 <script>
   const list = document.getElementById("list");
-  const hiddenDate = document.getElementById("hiddenDate");
-  let editingId = null;
 
   function getData() {
     return JSON.parse(localStorage.getItem("items")) || [];
@@ -177,52 +164,42 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            <span class="date ${overdue ? "overdue" : ""}">
-              ${item.date ? "期限: " + item.date : "期限を設定"}
-            </span>
+            <label class="date-label">
+              期限:
+              <input
+                type="date"
+                class="date-input ${overdue ? "overdue" : ""}"
+                value="${item.date || ""}"
+              >
+            </label>
           </div>
         </div>
         <button class="delete">削除</button>
       `;
 
-      li.querySelector("input").addEventListener("change", () => {
+      li.querySelector("input[type=checkbox]").addEventListener("change", () => {
         toggleItem(item.id);
+      });
+
+      li.querySelector(".date-input").addEventListener("change", e => {
+        updateDate(item.id, e.target.value);
       });
 
       li.querySelector(".delete").addEventListener("click", () => {
         removeItem(item.id);
       });
 
-      li.querySelector(".date").addEventListener("click", () => {
-        openDatePicker(item.id, item.date);
-      });
-
       list.appendChild(li);
     });
   }
 
-  function openDatePicker(id, currentDate) {
-    editingId = id;
-    hiddenDate.value = currentDate || "";
-
-    // 👇 iOS Safari / PWA 対策
-    hiddenDate.style.opacity = 0.01;
-    hiddenDate.focus();
-    hiddenDate.click();
-  }
-
-  hiddenDate.addEventListener("change", () => {
-    if (!editingId) return;
-
+  function updateDate(id, date) {
     const data = getData();
-    const item = data.find(i => i.id === editingId);
-    if (item) item.date = hiddenDate.value;
-
+    const item = data.find(i => i.id === id);
+    if (item) item.date = date;
     saveData(data);
-    editingId = null;
-    hiddenDate.style.opacity = 0;
     load();
-  });
+  }
 
   function addItem() {
     const text = document.getElementById("itemInput");
