@@ -77,6 +77,7 @@
     .date {
       font-size: 13px;
       color: #8e8e93;
+      cursor: pointer;
     }
 
     .overdue {
@@ -141,10 +142,6 @@
   function load() {
     let data = getData();
 
-    // 並び順：
-    // 1. 未チェック（期限あり → 近い順）
-    // 2. 未チェック（期限なし）
-    // 3. チェック済み
     data.sort((a, b) => {
       if (a.done !== b.done) return a.done - b.done;
       if (!a.date) return 1;
@@ -163,7 +160,12 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            ${item.date ? `<span class="date ${overdue ? "overdue" : ""}">期限: ${item.date}</span>` : ""}
+            ${item.date
+              ? `<span class="date ${overdue ? "overdue" : ""}" data-id="${item.id}">
+                   期限: ${item.date}
+                 </span>`
+              : `<span class="date" data-id="${item.id}">期限を設定</span>`
+            }
           </div>
         </div>
         <button class="delete">削除</button>
@@ -177,8 +179,25 @@
         removeItem(item.id);
       });
 
+      // 👇 期限編集
+      li.querySelector(".date").addEventListener("click", () => {
+        editDate(item.id, item.date);
+      });
+
       list.appendChild(li);
     });
+  }
+
+  function editDate(id, currentDate) {
+    const newDate = prompt("新しい期限 (YYYY-MM-DD)", currentDate || "");
+    if (newDate === null) return;
+
+    const data = getData();
+    const item = data.find(i => i.id === id);
+    if (item) item.date = newDate;
+
+    saveData(data);
+    load();
   }
 
   function addItem() {
