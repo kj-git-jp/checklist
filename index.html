@@ -143,6 +143,7 @@
 <div class="toolbar">
   <button onclick="backup()">バックアップ</button>
   <button onclick="restore()">復元</button>
+  <button onclick="restoreAutoBackup()">自動復元</button>
 </div>
 
 <div class="input-area">
@@ -328,6 +329,34 @@
     render();
   }
 
+  function autoBackup() {
+      const data = {
+        lists: getLists(),
+        currentList: currentList,
+        savedAt: new Date().toISOString()
+      };
+
+      localStorage.setItem("autoBackup", JSON.stringify(data));
+  }
+
+  function restoreAutoBackup() {
+      const backup = localStorage.getItem("autoBackup");
+      if (!backup) {
+        alert("自動バックアップはありません");
+        return;
+      }
+
+      if (!confirm("自動バックアップから復元しますか？\n現在のデータは上書きされます。")) {
+        return;
+      }
+
+      const data = JSON.parse(backup);
+      localStorage.setItem("lists", JSON.stringify(data.lists));
+      localStorage.setItem("currentList", data.currentList || "default");
+      location.reload();
+  }
+  
+  autoBackup();
   render();
 </script>
 
