@@ -96,7 +96,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 17px;
+      font-size: 15px; /* 少し小さく */
     }
 
     .text {
@@ -326,6 +326,11 @@
     saveLists(lists);
     itemInput.value = "";
     dateInput.value = "";
+
+    /* フォーカスを外す（重要） */
+    itemInput.blur();
+    dateInput.blur();
+
     render();
   }
 
