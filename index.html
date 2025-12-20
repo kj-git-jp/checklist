@@ -52,6 +52,19 @@
       color: #fff;
     }
 
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .toolbar button {
+      flex: 1;
+      background: #8e8e93;
+    }
+
     .input-area {
       display: flex;
       gap: 6px;
@@ -65,15 +78,6 @@
       font-size: 15px;
       border-radius: 10px;
       border: 1px solid #ccc;
-    }
-
-    button {
-      padding: 10px 14px;
-      font-size: 16px;
-      border-radius: 10px;
-      border: none;
-      background: #007aff;
-      color: #fff;
     }
 
     ul { margin: 0; padding: 0; }
@@ -120,7 +124,7 @@
 
     @media (prefers-color-scheme: dark) {
       body { background: #000; color: #fff; }
-      h2, .lists, .input-area, li { background: #1c1c1e; }
+      h2, .lists, .toolbar, .input-area, li { background: #1c1c1e; }
       li { border-bottom: 1px solid #2c2c2e; }
       input[type="text"], input[type="date"] {
         background: #2c2c2e;
@@ -136,6 +140,11 @@
 
 <div class="lists" id="lists"></div>
 
+<div class="toolbar">
+  <button onclick="backup()">バックアップ</button>
+  <button onclick="restore()">復元</button>
+</div>
+
 <div class="input-area">
   <input id="itemInput" placeholder="新しい項目">
   <input id="dateInput" type="date">
@@ -143,6 +152,8 @@
 </div>
 
 <ul id="items"></ul>
+
+<input id="fileInput" type="file" accept="application/json" style="display:none">
 
 <script>
   let currentList = localStorage.getItem("currentList") || "default";
@@ -156,6 +167,45 @@
   function saveLists(lists) {
     localStorage.setItem("lists", JSON.stringify(lists));
   }
+
+  function backup() {
+    const data = {
+      lists: getLists(),
+      currentList
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json"
+    });
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "checklist-backup.json";
+    a.click();
+  }
+
+  function restore() {
+    if (!confirm("現在のデータは上書きされます。続行しますか？")) return;
+    document.getElementById("fileInput").click();
+  }
+
+  document.getElementById("fileInput").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        localStorage.setItem("lists", JSON.stringify(data.lists));
+        localStorage.setItem("currentList", data.currentList || "default");
+        location.reload();
+      } catch {
+        alert("復元に失敗しました");
+      }
+    };
+    reader.readAsText(file);
+  });
 
   function isOverdue(date) {
     if (!date) return false;
@@ -172,20 +222,11 @@
       const btn = document.createElement("button");
       btn.textContent = lists[id].name;
       if (id === currentList) btn.classList.add("active");
-
       btn.onclick = () => {
         currentList = id;
         localStorage.setItem("currentList", id);
         render();
       };
-
-      // 👇 長押しで編集・削除
-      let timer;
-      btn.addEventListener("touchstart", () => {
-        timer = setTimeout(() => showListMenu(id), 600);
-      });
-      btn.addEventListener("touchend", () => clearTimeout(timer));
-
       container.appendChild(btn);
     });
 
@@ -196,6 +237,7 @@
       const name = prompt("リスト名");
       if (!name) return;
       const id = Date.now();
+      const lists = getLists();
       lists[id] = { name, items: [] };
       saveLists(lists);
       currentList = id;
@@ -203,38 +245,6 @@
       render();
     };
     container.appendChild(add);
-  }
-
-  function showListMenu(id) {
-    if (id === "default") {
-      alert("このリストは削除できません");
-      return;
-    }
-
-    const action = prompt(
-      "操作を選んでください:\n1: 名前変更\n2: 削除"
-    );
-
-    const lists = getLists();
-
-    if (action === "1") {
-      const newName = prompt("新しいリスト名", lists[id].name);
-      if (newName) {
-        lists[id].name = newName;
-        saveLists(lists);
-        render();
-      }
-    }
-
-    if (action === "2") {
-      if (confirm("このリストを削除しますか？")) {
-        delete lists[id];
-        saveLists(lists);
-        currentList = "default";
-        localStorage.setItem("currentList", "default");
-        render();
-      }
-    }
   }
 
   function render() {
@@ -294,17 +304,14 @@
   }
 
   function addItem() {
-    const text = itemInput.value;
-    if (!text) return;
-
+    if (!itemInput.value) return;
     const lists = getLists();
     lists[currentList].items.push({
       id: Date.now(),
-      text,
+      text: itemInput.value,
       date: dateInput.value,
       done: false
     });
-
     saveLists(lists);
     itemInput.value = "";
     dateInput.value = "";
