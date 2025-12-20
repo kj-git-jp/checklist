@@ -172,11 +172,20 @@
       const btn = document.createElement("button");
       btn.textContent = lists[id].name;
       if (id === currentList) btn.classList.add("active");
+
       btn.onclick = () => {
         currentList = id;
         localStorage.setItem("currentList", id);
         render();
       };
+
+      // 👇 長押しで編集・削除
+      let timer;
+      btn.addEventListener("touchstart", () => {
+        timer = setTimeout(() => showListMenu(id), 600);
+      });
+      btn.addEventListener("touchend", () => clearTimeout(timer));
+
       container.appendChild(btn);
     });
 
@@ -194,6 +203,38 @@
       render();
     };
     container.appendChild(add);
+  }
+
+  function showListMenu(id) {
+    if (id === "default") {
+      alert("このリストは削除できません");
+      return;
+    }
+
+    const action = prompt(
+      "操作を選んでください:\n1: 名前変更\n2: 削除"
+    );
+
+    const lists = getLists();
+
+    if (action === "1") {
+      const newName = prompt("新しいリスト名", lists[id].name);
+      if (newName) {
+        lists[id].name = newName;
+        saveLists(lists);
+        render();
+      }
+    }
+
+    if (action === "2") {
+      if (confirm("このリストを削除しますか？")) {
+        delete lists[id];
+        saveLists(lists);
+        currentList = "default";
+        localStorage.setItem("currentList", "default");
+        render();
+      }
+    }
   }
 
   function render() {
