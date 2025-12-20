@@ -135,7 +135,9 @@
     }
 
     .date-input {
-      display: none;
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
     }
 
     .delete {
@@ -288,7 +290,12 @@
 
       const dateInput = li.querySelector(".date-input");
       li.querySelector(".date-label").onclick = () => {
-        dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+        dateInput.focus();
+        if (dateInput.showPicker) {
+          dateInput.showPicker();
+        } else {
+          dateInput.click();
+        }
       };
 
       dateInput.onchange = e => {
