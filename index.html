@@ -103,7 +103,7 @@
     .text {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;     /* 行間を少し詰める */
     }
 
     .overdue {
@@ -121,6 +121,12 @@
       border: none;
       font-size: 16px;
       color: #ff3b30;
+    }
+
+    .text input[type="date"] {
+      font-size: 13px;      /* 期限だけ小さく */
+      padding: 2px 0;       /* 余白を減らす */
+      line-height: 1.2;
     }
 
     @media (prefers-color-scheme: dark) {
