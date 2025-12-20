@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>チェックリスト</title>
+
+  <!-- iOSズーム防止 -->
   <meta name="viewport"
-      content="width=device-width, initial-scale=1, maximum-scale=1">
+        content="width=device-width, initial-scale=1, maximum-scale=1">
 
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -64,6 +66,10 @@
     .toolbar button {
       flex: 1;
       background: #8e8e93;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
     }
 
     .input-area {
@@ -85,7 +91,7 @@
 
     li {
       list-style: none;
-      padding: 14px 16px;
+      padding: 12px 16px;
       background: #fff;
       border-bottom: 1px solid #e5e5ea;
       display: flex;
@@ -97,18 +103,13 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 15px; /* 少し小さく */
+      font-size: 15px;
     }
 
     .text {
       display: flex;
       flex-direction: column;
-      gap: 2px;     /* 行間を少し詰める */
-    }
-
-    .overdue {
-      color: #ff3b30;
-      font-weight: 600;
+      gap: 2px;
     }
 
     .done {
@@ -116,28 +117,32 @@
       text-decoration: line-through;
     }
 
+    /* ===== 期限表示 ===== */
+    .date-label {
+      font-size: 13px;
+      color: #8e8e93;
+      cursor: pointer;
+    }
+
+    .date-label.due-today {
+      color: #ff9500;
+      font-weight: 600;
+    }
+
+    .date-label.overdue {
+      color: #ff3b30;
+      font-weight: 700;
+    }
+
+    .date-input {
+      display: none;
+    }
+
     .delete {
       background: none;
       border: none;
       font-size: 16px;
       color: #ff3b30;
-    }
-
-    .text input[type="date"] {
-      font-size: 13px;      /* 期限だけ小さく */
-      padding: 2px 0;       /* 余白を減らす */
-      line-height: 1.2;
-    }
-
-    /* 期限表示の色分け */
-    .due-today {
-      color: #ff9500;       /* iOSオレンジ */
-      font-weight: 600;
-    }
-
-    .overdue {
-      color: #ff3b30;       /* iOS赤（強め） */
-      font-weight: 700;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -187,63 +192,19 @@
     localStorage.setItem("lists", JSON.stringify(lists));
   }
 
-  function backup() {
-      alert(
-      "バックアップファイルを保存します。\n\n" +
-      "次の画面で必ず\n「ファイルに保存」→ iCloud Drive\nを選んでください。"
-      );
-
-      const data = {
-        lists: getLists(),
-        currentList: currentList
-      };
-
-      const blob = new Blob(
-        [JSON.stringify(data, null, 2)],
-        { type: "application/json" }
-      );
-
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download =
-        "checklist-backup-" +
-        new Date().toISOString().split("T")[0] +
-        ".json";
-
-      a.click();
-  }
-
-  function restore() {
-    if (!confirm("現在のデータは上書きされます。続行しますか？")) return;
-    document.getElementById("fileInput").click();
-  }
-
-  document.getElementById("fileInput").addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(reader.result);
-        localStorage.setItem("lists", JSON.stringify(data.lists));
-        localStorage.setItem("currentList", data.currentList || "default");
-        location.reload();
-      } catch {
-        alert("復元に失敗しました");
-      }
-    };
-    reader.readAsText(file);
-  });
-
   function getDueStatus(date) {
-      if (!date) return "";
+    if (!date) return "";
+    const today = new Date().toISOString().split("T")[0];
+    if (date < today) return "overdue";
+    if (date === today) return "due-today";
+    return "";
+  }
 
-      const today = new Date().toISOString().split("T")[0];
-
-      if (date < today) return "overdue";
-      if (date === today) return "due-today";
-      return "";
+  function autoBackup() {
+    localStorage.setItem("autoBackup", JSON.stringify({
+      lists: getLists(),
+      currentList
+    }));
   }
 
   function renderLists() {
@@ -281,6 +242,8 @@
   }
 
   function render() {
+    autoBackup();
+
     const lists = getLists();
     const list = lists[currentList];
     if (!list) return;
@@ -306,9 +269,12 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
+            <span class="date-label ${dueClass}">
+              ${item.date || "期限を設定"}
+            </span>
             <input type="date"
-                   value="${item.date || ""}"
-                   class="${dueClass}">
+                   class="date-input"
+                   value="${item.date || ""}">
           </div>
         </div>
         <button class="delete">削除</button>
@@ -320,7 +286,12 @@
         render();
       };
 
-      li.querySelector("input[type=date]").onchange = e => {
+      const dateInput = li.querySelector(".date-input");
+      li.querySelector(".date-label").onclick = () => {
+        dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+      };
+
+      dateInput.onchange = e => {
         item.date = e.target.value;
         saveLists(lists);
         render();
@@ -340,6 +311,7 @@
 
   function addItem() {
     if (!itemInput.value) return;
+
     const lists = getLists();
     lists[currentList].items.push({
       id: Date.now(),
@@ -347,45 +319,56 @@
       date: dateInput.value,
       done: false
     });
+
     saveLists(lists);
     itemInput.value = "";
     dateInput.value = "";
-
-    /* フォーカスを外す（重要） */
     itemInput.blur();
     dateInput.blur();
-
     render();
   }
 
-  function autoBackup() {
-      const data = {
-        lists: getLists(),
-        currentList: currentList,
-        savedAt: new Date().toISOString()
-      };
+  function backup() {
+    alert("次の画面で「ファイルに保存」→ iCloud Drive を選んでください");
 
-      localStorage.setItem("autoBackup", JSON.stringify(data));
+    const blob = new Blob(
+      [JSON.stringify({ lists: getLists(), currentList }, null, 2)],
+      { type: "application/json" }
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "checklist-backup-" +
+      new Date().toISOString().split("T")[0] + ".json";
+    a.click();
   }
 
-  function restoreAutoBackup() {
-      const backup = localStorage.getItem("autoBackup");
-      if (!backup) {
-        alert("自動バックアップはありません");
-        return;
-      }
+  function restore() {
+    if (!confirm("現在のデータは上書きされます。")) return;
+    fileInput.click();
+  }
 
-      if (!confirm("自動バックアップから復元しますか？\n現在のデータは上書きされます。")) {
-        return;
-      }
-
-      const data = JSON.parse(backup);
+  fileInput.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = JSON.parse(reader.result);
       localStorage.setItem("lists", JSON.stringify(data.lists));
       localStorage.setItem("currentList", data.currentList || "default");
       location.reload();
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+
+  function restoreAutoBackup() {
+    const backup = localStorage.getItem("autoBackup");
+    if (!backup) return alert("自動バックアップはありません");
+    if (!confirm("自動バックアップから復元しますか？")) return;
+    const data = JSON.parse(backup);
+    localStorage.setItem("lists", JSON.stringify(data.lists));
+    localStorage.setItem("currentList", data.currentList);
+    location.reload();
   }
-  
-  autoBackup();
+
   render();
 </script>
 
