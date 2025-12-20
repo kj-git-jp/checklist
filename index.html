@@ -169,19 +169,29 @@
   }
 
   function backup() {
-    const data = {
-      lists: getLists(),
-      currentList
-    };
+      alert(
+      "バックアップファイルを保存します。\n\n" +
+      "次の画面で必ず\n「ファイルに保存」→ iCloud Drive\nを選んでください。"
+      );
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json"
-    });
+      const data = {
+        lists: getLists(),
+        currentList: currentList
+      };
 
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "checklist-backup.json";
-    a.click();
+      const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+      );
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download =
+        "checklist-backup-" +
+        new Date().toISOString().split("T")[0] +
+        ".json";
+
+      a.click();
   }
 
   function restore() {
