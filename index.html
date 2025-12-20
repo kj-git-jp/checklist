@@ -76,7 +76,7 @@
 
     .date {
       font-size: 13px;
-      color: #8e8e93;
+      color: #007aff;
       cursor: pointer;
     }
 
@@ -122,8 +122,13 @@
 
 <ul id="list"></ul>
 
+<!-- 👇 編集用の隠し date picker -->
+<input id="hiddenDate" type="date" style="display:none">
+
 <script>
   const list = document.getElementById("list");
+  const hiddenDate = document.getElementById("hiddenDate");
+  let editingId = null;
 
   function getData() {
     return JSON.parse(localStorage.getItem("items")) || [];
@@ -160,12 +165,9 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            ${item.date
-              ? `<span class="date ${overdue ? "overdue" : ""}" data-id="${item.id}">
-                   期限: ${item.date}
-                 </span>`
-              : `<span class="date" data-id="${item.id}">期限を設定</span>`
-            }
+            <span class="date ${overdue ? "overdue" : ""}" data-id="${item.id}">
+              ${item.date ? "期限: " + item.date : "期限を設定"}
+            </span>
           </div>
         </div>
         <button class="delete">削除</button>
@@ -179,26 +181,31 @@
         removeItem(item.id);
       });
 
-      // 👇 期限編集
       li.querySelector(".date").addEventListener("click", () => {
-        editDate(item.id, item.date);
+        openDatePicker(item.id, item.date);
       });
 
       list.appendChild(li);
     });
   }
 
-  function editDate(id, currentDate) {
-    const newDate = prompt("新しい期限 (YYYY-MM-DD)", currentDate || "");
-    if (newDate === null) return;
+  function openDatePicker(id, currentDate) {
+    editingId = id;
+    hiddenDate.value = currentDate || "";
+    hiddenDate.click(); // ← iOS標準ピッカーが出る
+  }
+
+  hiddenDate.addEventListener("change", () => {
+    if (!editingId) return;
 
     const data = getData();
-    const item = data.find(i => i.id === id);
-    if (item) item.date = newDate;
+    const item = data.find(i => i.id === editingId);
+    if (item) item.date = hiddenDate.value;
 
     saveData(data);
+    editingId = null;
     load();
-  }
+  });
 
   function addItem() {
     const text = document.getElementById("itemInput");
