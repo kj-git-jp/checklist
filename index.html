@@ -118,10 +118,14 @@
     }
 
     /* ===== 期限表示 ===== */
+    .date-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
     .date-label {
       font-size: 13px;
       color: #8e8e93;
-      cursor: pointer;
     }
 
     .date-label.due-today {
@@ -134,10 +138,13 @@
       font-weight: 700;
     }
 
+    /* 透明だけどタップ可能（iOS対策の決定版） */
     .date-input {
       position: absolute;
+      inset: 0;
       opacity: 0;
-      pointer-events: none;
+      width: 100%;
+      height: 100%;
     }
 
     .delete {
@@ -210,37 +217,36 @@
   }
 
   function showListMenu(id) {
-      if (id === "default") {
-        alert("このリストは削除できません");
-        return;
+    if (id === "default") {
+      alert("このリストは削除できません");
+      return;
+    }
+
+    const lists = getLists();
+    const action = prompt(
+      "操作を選んでください\n\n1：名前を変更\n2：削除"
+    );
+
+    if (action === "1") {
+      const newName = prompt("新しいリスト名", lists[id].name);
+      if (newName) {
+        lists[id].name = newName;
+        saveLists(lists);
+        render();
       }
+    }
 
-      const lists = getLists();
-
-      const action = prompt(
-        "操作を選んでください\n\n1：名前を変更\n2：削除"
-      );
-
-      if (action === "1") {
-        const newName = prompt("新しいリスト名", lists[id].name);
-        if (newName) {
-          lists[id].name = newName;
-          saveLists(lists);
-          render();
-        }
+    if (action === "2") {
+      if (confirm("このリストを削除しますか？")) {
+        delete lists[id];
+        saveLists(lists);
+        currentList = "default";
+        localStorage.setItem("currentList", "default");
+        render();
       }
-
-      if (action === "2") {
-        if (confirm("このリストを削除しますか？")) {
-          delete lists[id];
-          saveLists(lists);
-          currentList = "default";
-          localStorage.setItem("currentList", "default");
-          render();
-        }
-      }
+    }
   }
-  
+
   function renderLists() {
     const lists = getLists();
     const container = document.getElementById("lists");
@@ -251,21 +257,17 @@
       btn.textContent = lists[id].name;
       if (id === currentList) btn.classList.add("active");
 
-      // 通常タップ：切り替え
       btn.onclick = () => {
         currentList = id;
         localStorage.setItem("currentList", id);
         render();
       };
 
-      // 長押し：編集・削除
       let timer;
       btn.addEventListener("touchstart", () => {
         timer = setTimeout(() => showListMenu(id), 600);
       });
       btn.addEventListener("touchend", () => clearTimeout(timer));
-
-      // PC / Safari対策（長押し）
       btn.addEventListener("mousedown", () => {
         timer = setTimeout(() => showListMenu(id), 600);
       });
@@ -319,12 +321,14 @@
           <input type="checkbox" ${item.done ? "checked" : ""}>
           <div class="text">
             <span class="${item.done ? "done" : ""}">${item.text}</span>
-            <span class="date-label ${dueClass}">
-              ${item.date || "期限を設定"}
-            </span>
-            <input type="date"
-                   class="date-input"
-                   value="${item.date || ""}">
+            <div class="date-wrap">
+              <span class="date-label ${dueClass}">
+                ${item.date || "期限を設定"}
+              </span>
+              <input type="date"
+                     class="date-input"
+                     value="${item.date || ""}">
+            </div>
           </div>
         </div>
         <button class="delete">削除</button>
@@ -337,22 +341,6 @@
       };
 
       const dateInput = li.querySelector(".date-input");
-      li.querySelector(".date-label").onclick = () => {
-        dateInput.focus();
-
-        // 空のときは showPicker を使わない（iOS対策）
-        if (!dateInput.value) {
-          dateInput.click();
-          return;
-        }
-
-        if (dateInput.showPicker) {
-          dateInput.showPicker();
-        } else {
-          dateInput.click();
-        }
-      };
-
       dateInput.onchange = e => {
         item.date = e.target.value;
         saveLists(lists);
