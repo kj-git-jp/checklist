@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>チェックリスト</title>
 
+  <!-- iOSズーム防止 -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1">
 
@@ -41,6 +42,7 @@
       border: none;
       background: #e5e5ea;
       font-size: 14px;
+      white-space: nowrap;
     }
 
     .lists .active {
@@ -51,6 +53,23 @@
     .add-list {
       background: #34c759;
       color: #fff;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .toolbar button {
+      flex: 1;
+      background: #8e8e93;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
     }
 
     .input-area {
@@ -77,11 +96,14 @@
       border-bottom: 1px solid #e5e5ea;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
 
     .left {
       display: flex;
+      align-items: center;
       gap: 10px;
+      font-size: 15px;
     }
 
     .text {
@@ -91,11 +113,11 @@
     }
 
     .done {
-      text-decoration: line-through;
       color: #8e8e93;
+      text-decoration: line-through;
     }
 
-    /* ===== 期限 ===== */
+    /* ===== 期限表示 ===== */
     .date-wrap {
       position: relative;
       display: inline-block;
@@ -116,6 +138,7 @@
       font-weight: 700;
     }
 
+    /* 透明だけどタップ可能（iOS対策の決定版） */
     .date-input {
       position: absolute;
       inset: 0;
@@ -125,17 +148,35 @@
     }
 
     .delete {
-      border: none;
       background: none;
-      color: #ff3b30;
+      border: none;
       font-size: 16px;
+      color: #ff3b30;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: #000; color: #fff; }
+      h2, .lists, .toolbar, .input-area, li { background: #1c1c1e; }
+      li { border-bottom: 1px solid #2c2c2e; }
+      input[type="text"], input[type="date"] {
+        background: #2c2c2e;
+        color: #fff;
+        border: 1px solid #3a3a3c;
+      }
     }
   </style>
 </head>
 <body>
 
 <h2 id="title">チェックリスト</h2>
+
 <div class="lists" id="lists"></div>
+
+<div class="toolbar">
+  <button onclick="backup()">バックアップ</button>
+  <button onclick="restore()">復元</button>
+  <button onclick="restoreAutoBackup()">自動復元</button>
+</div>
 
 <div class="input-area">
   <input id="itemInput" placeholder="新しい項目">
@@ -145,8 +186,10 @@
 
 <ul id="items"></ul>
 
+<input id="fileInput" type="file" accept="application/json" style="display:none">
+
 <script>
-  let currentList = "default";
+  let currentList = localStorage.getItem("currentList") || "default";
 
   function getLists() {
     return JSON.parse(localStorage.getItem("lists")) || {
@@ -166,9 +209,106 @@
     return "";
   }
 
+  function autoBackup() {
+    localStorage.setItem("autoBackup", JSON.stringify({
+      lists: getLists(),
+      currentList
+    }));
+  }
+
+  function showListMenu(id) {
+    if (id === "default") {
+      alert("このリストは削除できません");
+      return;
+    }
+
+    const lists = getLists();
+    const action = prompt(
+      "操作を選んでください\n\n1：名前を変更\n2：削除"
+    );
+
+    if (action === "1") {
+      const newName = prompt("新しいリスト名", lists[id].name);
+      if (newName) {
+        lists[id].name = newName;
+        saveLists(lists);
+        render();
+      }
+    }
+
+    if (action === "2") {
+      if (confirm("このリストを削除しますか？")) {
+        delete lists[id];
+        saveLists(lists);
+        currentList = "default";
+        localStorage.setItem("currentList", "default");
+        render();
+      }
+    }
+  }
+
+  function renderLists() {
+    const lists = getLists();
+    const container = document.getElementById("lists");
+    container.innerHTML = "";
+
+    Object.keys(lists).forEach(id => {
+      const btn = document.createElement("button");
+      btn.textContent = lists[id].name;
+      if (id === currentList) btn.classList.add("active");
+
+      btn.onclick = () => {
+        currentList = id;
+        localStorage.setItem("currentList", id);
+        render();
+      };
+
+      let timer;
+      btn.addEventListener("touchstart", () => {
+        timer = setTimeout(() => showListMenu(id), 600);
+      });
+      btn.addEventListener("touchend", () => clearTimeout(timer));
+      btn.addEventListener("mousedown", () => {
+        timer = setTimeout(() => showListMenu(id), 600);
+      });
+      btn.addEventListener("mouseup", () => clearTimeout(timer));
+
+      container.appendChild(btn);
+    });
+
+    const add = document.createElement("button");
+    add.textContent = "＋";
+    add.className = "add-list";
+    add.onclick = () => {
+      const name = prompt("リスト名");
+      if (!name) return;
+      const id = Date.now();
+      const lists = getLists();
+      lists[id] = { name, items: [] };
+      saveLists(lists);
+      currentList = id;
+      localStorage.setItem("currentList", id);
+      render();
+    };
+    container.appendChild(add);
+  }
+
   function render() {
+    autoBackup();
+
     const lists = getLists();
     const list = lists[currentList];
+    if (!list) return;
+
+    document.getElementById("title").textContent = list.name;
+
+    list.items.sort((a, b) => {
+      if (a.done !== b.done) return a.done - b.done;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return a.date.localeCompare(b.date);
+    });
+
     const ul = document.getElementById("items");
     ul.innerHTML = "";
 
@@ -194,45 +334,29 @@
         <button class="delete">削除</button>
       `;
 
-      const checkbox = li.querySelector("input[type=checkbox]");
-      const dateInput = li.querySelector(".date-input");
-
-      let originalDate = item.date || "";
-
-      checkbox.onchange = () => {
+      li.querySelector("input[type=checkbox]").onchange = () => {
         item.done = !item.done;
         saveLists(lists);
         render();
       };
 
-      dateInput.onfocus = () => {
-        originalDate = item.date || "";
-      };
-
+      const dateInput = li.querySelector(".date-input");
       dateInput.onchange = e => {
-        const newDate = e.target.value;
-        item.date = newDate || "";
+        item.date = e.target.value;
         saveLists(lists);
         render();
       };
 
-      dateInput.onblur = () => {
-        // 🔄 リセットされた場合（valueが空）
-        if (!dateInput.value) {
-          item.date = "";
-          saveLists(lists);
-          render();
-        }
-      };
-
       li.querySelector(".delete").onclick = () => {
-        list.items = list.items.filter(i => i !== item);
+        list.items = list.items.filter(i => i.id !== item.id);
         saveLists(lists);
         render();
       };
 
       ul.appendChild(li);
     });
+
+    renderLists();
   }
 
   function addItem() {
@@ -240,15 +364,59 @@
 
     const lists = getLists();
     lists[currentList].items.push({
+      id: Date.now(),
       text: itemInput.value,
-      date: "",
+      date: dateInput.value,
       done: false
     });
 
     saveLists(lists);
     itemInput.value = "";
     dateInput.value = "";
+    itemInput.blur();
+    dateInput.blur();
     render();
+  }
+
+  function backup() {
+    alert("次の画面で「ファイルに保存」→ iCloud Drive を選んでください");
+
+    const blob = new Blob(
+      [JSON.stringify({ lists: getLists(), currentList }, null, 2)],
+      { type: "application/json" }
+    );
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "checklist-backup-" +
+      new Date().toISOString().split("T")[0] + ".json";
+    a.click();
+  }
+
+  function restore() {
+    if (!confirm("現在のデータは上書きされます。")) return;
+    fileInput.click();
+  }
+
+  fileInput.onchange = e => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = JSON.parse(reader.result);
+      localStorage.setItem("lists", JSON.stringify(data.lists));
+      localStorage.setItem("currentList", data.currentList || "default");
+      location.reload();
+    };
+    reader.readAsText(e.target.files[0]);
+  };
+
+  function restoreAutoBackup() {
+    const backup = localStorage.getItem("autoBackup");
+    if (!backup) return alert("自動バックアップはありません");
+    if (!confirm("自動バックアップから復元しますか？")) return;
+    const data = JSON.parse(backup);
+    localStorage.setItem("lists", JSON.stringify(data.lists));
+    localStorage.setItem("currentList", data.currentList);
+    location.reload();
   }
 
   render();
