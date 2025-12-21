@@ -217,11 +217,11 @@
   }
 
   function getDueStatus(date) {
-    if (!date) return "";
+    if (!date) return "no-date";
     const today = new Date().toISOString().split("T")[0];
     if (date < today) return "overdue";
     if (date === today) return "due-today";
-    return "";
+    return "future";
   }
 
   function autoBackup() {
