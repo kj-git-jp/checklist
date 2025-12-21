@@ -209,6 +209,38 @@
     }));
   }
 
+  function showListMenu(id) {
+      if (id === "default") {
+        alert("このリストは削除できません");
+        return;
+      }
+
+      const lists = getLists();
+
+      const action = prompt(
+        "操作を選んでください\n\n1：名前を変更\n2：削除"
+      );
+
+      if (action === "1") {
+        const newName = prompt("新しいリスト名", lists[id].name);
+        if (newName) {
+          lists[id].name = newName;
+          saveLists(lists);
+          render();
+        }
+      }
+
+      if (action === "2") {
+        if (confirm("このリストを削除しますか？")) {
+          delete lists[id];
+          saveLists(lists);
+          currentList = "default";
+          localStorage.setItem("currentList", "default");
+          render();
+        }
+      }
+  }
+  
   function renderLists() {
     const lists = getLists();
     const container = document.getElementById("lists");
