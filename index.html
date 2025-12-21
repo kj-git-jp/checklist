@@ -147,6 +147,18 @@
       height: 100%;
     }
 
+    .clear-date {
+      border: none;
+      background: none;
+      color: #8e8e93;
+      font-size: 14px;
+      margin-left: 6px;
+    }
+
+    .clear-date:active {
+      color: #ff3b30;
+    }
+
     .delete {
       background: none;
       border: none;
@@ -328,6 +340,7 @@
               <input type="date"
                      class="date-input"
                      value="${item.date || ""}">
+              <button class="clear-date">✕</button>
             </div>
           </div>
         </div>
@@ -343,6 +356,13 @@
       const dateInput = li.querySelector(".date-input");
       dateInput.onchange = e => {
         item.date = e.target.value;
+        saveLists(lists);
+        render();
+      };
+
+      li.querySelector(".clear-date").onclick = e => {
+        e.stopPropagation();   // ← 超重要（誤動作防止）
+        item.date = "";
         saveLists(lists);
         render();
       };
