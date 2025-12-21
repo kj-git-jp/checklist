@@ -147,20 +147,6 @@
       height: 100%;
     }
 
-    .date-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .clear-date {
-      border: none;
-      background: none;
-      color: #8e8e93;
-      font-size: 16px;
-      padding: 0 4px;
-    }
-
     .delete {
       background: none;
       border: none;
@@ -339,12 +325,9 @@
               <span class="date-label ${dueClass}">
                 ${item.date || "期限を設定"}
               </span>
-              <div class="date-row">
-                <input type="date"
-                       value="${item.date || ""}"
-                       class="${dueClass}">
-                <button class="clear-date">✕</button>
-              </div>
+              <input type="date"
+                     class="date-input"
+                     value="${item.date || ""}">
             </div>
           </div>
         </div>
