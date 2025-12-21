@@ -250,11 +250,27 @@
       const btn = document.createElement("button");
       btn.textContent = lists[id].name;
       if (id === currentList) btn.classList.add("active");
+
+      // 通常タップ：切り替え
       btn.onclick = () => {
         currentList = id;
         localStorage.setItem("currentList", id);
         render();
       };
+
+      // 長押し：編集・削除
+      let timer;
+      btn.addEventListener("touchstart", () => {
+        timer = setTimeout(() => showListMenu(id), 600);
+      });
+      btn.addEventListener("touchend", () => clearTimeout(timer));
+
+      // PC / Safari対策（長押し）
+      btn.addEventListener("mousedown", () => {
+        timer = setTimeout(() => showListMenu(id), 600);
+      });
+      btn.addEventListener("mouseup", () => clearTimeout(timer));
+
       container.appendChild(btn);
     });
 
