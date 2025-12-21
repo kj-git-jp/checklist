@@ -339,6 +339,13 @@
       const dateInput = li.querySelector(".date-input");
       li.querySelector(".date-label").onclick = () => {
         dateInput.focus();
+
+        // 空のときは showPicker を使わない（iOS対策）
+        if (!dateInput.value) {
+          dateInput.click();
+          return;
+        }
+
         if (dateInput.showPicker) {
           dateInput.showPicker();
         } else {
